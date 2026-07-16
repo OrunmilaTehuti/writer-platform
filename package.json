@@ -1,0 +1,16 @@
+{
+  "name": "writer-platform",
+  "private": true,
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "db:generate": "pnpm --filter @writer-platform/db generate",
+    "db:push": "pnpm --filter @writer-platform/db push",
+    "collab:server": "pnpm --filter @writer-platform/web collab:server"
+  },
+  "devDependencies": {
+    "turbo": "^2.1.0"
+  },
+  "packageManager": "pnpm@9.9.0"
+}
