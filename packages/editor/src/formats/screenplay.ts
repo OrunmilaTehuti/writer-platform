@@ -7,7 +7,20 @@ import { Node, mergeAttributes } from "@tiptap/core";
  * Each element is its own block-level node so we can apply the correct
  * margins/casing/centering per Hollywood-standard formatting rules, and
  * so export-to-PDF can walk the doc tree element-by-element.
+ *
+ * Each node defines its own Enter behavior ("addKeyboardShortcuts") so
+ * pressing Enter reliably starts a genuinely new line/node - and, like
+ * real screenplay software, auto-advances to the sensible next element
+ * type (e.g. Character -> Dialogue) instead of repeating the same type.
+ * Without this, Enter has no defined behavior for these custom node
+ * types and text from separate "lines" ends up merged into one node.
  */
+
+function enterAdvancesTo(nextType: string) {
+  return function (this: { editor: any }) {
+    return this.editor.chain().splitBlock().setNode(nextType).run();
+  };
+}
 
 export const SceneHeading = Node.create({
   name: "sceneHeading",
@@ -26,6 +39,9 @@ export const SceneHeading = Node.create({
       0,
     ];
   },
+  addKeyboardShortcuts() {
+    return { Enter: enterAdvancesTo("action").bind(this) };
+  },
 });
 
 export const Action = Node.create({
@@ -42,6 +58,10 @@ export const Action = Node.create({
       0,
     ];
   },
+  addKeyboardShortcuts() {
+    // Action is often several lines/paragraphs in a row, so Enter stays in Action.
+    return { Enter: enterAdvancesTo("action").bind(this) };
+  },
 });
 
 export const Character = Node.create({
@@ -57,6 +77,9 @@ export const Character = Node.create({
       mergeAttributes(HTMLAttributes, { "data-type": "character", class: "screenplay-character" }),
       0,
     ];
+  },
+  addKeyboardShortcuts() {
+    return { Enter: enterAdvancesTo("dialogue").bind(this) };
   },
 });
 
@@ -77,6 +100,9 @@ export const Parenthetical = Node.create({
       0,
     ];
   },
+  addKeyboardShortcuts() {
+    return { Enter: enterAdvancesTo("dialogue").bind(this) };
+  },
 });
 
 export const Dialogue = Node.create({
@@ -92,6 +118,9 @@ export const Dialogue = Node.create({
       mergeAttributes(HTMLAttributes, { "data-type": "dialogue", class: "screenplay-dialogue" }),
       0,
     ];
+  },
+  addKeyboardShortcuts() {
+    return { Enter: enterAdvancesTo("action").bind(this) };
   },
 });
 
