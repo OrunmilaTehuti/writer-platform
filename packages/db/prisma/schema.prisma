@@ -21,6 +21,8 @@ enum PostType {
 
 model User {
   id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
   handle        String    @unique
   displayName   String
   bio           String?

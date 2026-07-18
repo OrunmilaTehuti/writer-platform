@@ -54,6 +54,7 @@ export function useCollaborativeEditor({
   }, [provider]);
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({ history: false }), // Yjs owns undo/redo history
       ...formatExtensions[format],

@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
+import { useSession } from "next-auth/react";
 import { EditorContent } from "@tiptap/react";
 import { useCollaborativeEditor, type DocumentFormat } from "@writer-platform/editor";
 
-const randomColor = () =>
-  `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`;
+const randomColor = () => `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`;
 
 /**
  * Demo route: /editor/[docId]?format=SCREENPLAY|BLOG|ACADEMIC
@@ -20,13 +20,17 @@ export default function EditorPage({
   params: { docId: string };
   searchParams: { format?: string };
 }) {
+  const { data: session, status: sessionStatus } = useSession();
   const format = (searchParams.format?.toUpperCase() as DocumentFormat) || "BLOG";
 
-  // In a real app this comes from the authenticated session, not Math.random()
-  const user = useMemo(
-    () => ({ name: `Guest-${Math.floor(Math.random() * 1000)}`, color: randomColor() }),
-    []
-  );
+  // Falls back to a guest identity only if not logged in, so the demo
+  // still works for a quick look without requiring sign-up first.
+  const user = useMemo(() => {
+    if (session?.user) {
+      return { name: session.user.name || "Writer", color: randomColor() };
+    }
+    return { name: `Guest-${Math.floor(Math.random() * 1000)}`, color: randomColor() };
+  }, [session]);
 
   const { editor, status } = useCollaborativeEditor({
     documentId: params.docId,
@@ -35,8 +39,14 @@ export default function EditorPage({
     collabServerUrl: process.env.NEXT_PUBLIC_COLLAB_URL || "ws://localhost:1234",
   });
 
+  if (sessionStatus === "loading") return null;
+
   return (
     <main style={{ maxWidth: 720, margin: "2rem auto", fontFamily: "sans-serif" }}>
+      <p>
+        Editing as: <strong>{user.name}</strong>{" "}
+        {!session?.user && "(guest - log in to save documents to your account)"}
+      </p>
       <p>
         Format: <strong>{format}</strong> · Collab status: <strong>{status}</strong>
       </p>
