@@ -1,19 +1,24 @@
 import Link from "next/link";
 import { auth, signOut } from "@/auth";
+import Feed from "./feed";
+import NotificationBell from "./notification-bell";
 
-// Placeholder feed - swap in real posts from @writer-platform/db once
-// the social feed UI is built. Kept unstyled on purpose: visual design
-// is a separate pass (see README "Next steps").
 export default async function Home() {
   const session = await auth();
 
   return (
-    <main style={{ maxWidth: 640, margin: "4rem auto", fontFamily: "sans-serif" }}>
-      <h1>Writer Platform</h1>
+    <main style={{ maxWidth: 900, margin: "2rem auto", fontFamily: "sans-serif", padding: "0 1rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h1>Writer Platform</h1>
+        {session?.user && <NotificationBell />}
+      </div>
 
       {session?.user ? (
-        <div>
-          <p>Signed in as {session.user.name} ({session.user.email})</p>
+        <div style={{ marginBottom: "1.5rem" }}>
+          <p>
+            Signed in as {session.user.name} ({session.user.email}) ·{" "}
+            <Link href="/editor/demo-doc">Editor demo</Link>
+          </p>
           <form
             action={async () => {
               "use server";
@@ -29,11 +34,11 @@ export default async function Home() {
         </p>
       )}
 
-      <p>Feed of posts from writers you follow will render here.</p>
-      <p>
-        Try the collaborative editor demo:{" "}
-        <Link href="/editor/demo-doc">/editor/demo-doc</Link>
-      </p>
+      {session?.user ? (
+        <Feed />
+      ) : (
+        <p style={{ color: "#666" }}>Log in to see your feed and follow other writers.</p>
+      )}
     </main>
   );
 }
