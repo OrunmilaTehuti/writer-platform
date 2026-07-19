@@ -17,7 +17,7 @@ export default async function Home() {
         <div style={{ marginBottom: "1.5rem" }}>
           <p>
             Signed in as {session.user.name} ({session.user.email}) ·{" "}
-            <Link href="/editor/demo-doc">Editor demo</Link>
+            <Link href="/documents">My Documents</Link>
           </p>
           <form
             action={async () => {

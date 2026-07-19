@@ -14,9 +14,10 @@ enum DocumentFormat {
 }
 
 enum PostType {
-  STATUS      // short update, no attached document
-  EXCERPT     // snippet of a document, links back to it
-  PUBLISHED   // full document shared publicly
+  STATUS         // short update, no attached document
+  EXCERPT        // snippet of a document, links back to it
+  PUBLISHED      // full document shared publicly
+  COLLABORATION  // auto-generated "X and Y are collaborating" announcement
 }
 
 model User {
@@ -73,14 +74,24 @@ model Document {
   posts         Post[]
 }
 
-// Join table for multi-user real-time collaboration permissions
+enum CollaborationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+// Join table for multi-user real-time collaboration permissions. New
+// collaborators start PENDING until they accept the invite - editor
+// access (and the collab-announcement post) only happens once ACCEPTED.
 model DocumentCollaborator {
-  id            String    @id @default(cuid())
-  document      Document  @relation(fields: [documentId], references: [id])
+  id            String              @id @default(cuid())
+  document      Document            @relation(fields: [documentId], references: [id])
   documentId    String
-  user          User      @relation(fields: [userId], references: [id])
+  user          User                @relation(fields: [userId], references: [id])
   userId        String
-  role          String    @default("editor") // editor | viewer
+  role          String              @default("editor") // editor | viewer
+  status        CollaborationStatus @default(PENDING)
+  createdAt     DateTime            @default(now())
 
   @@unique([documentId, userId])
 }
