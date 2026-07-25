@@ -16,9 +16,7 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-
     const result = await signIn("credentials", { email, password, redirect: false });
-
     setLoading(false);
     if (result?.error) {
       setError("Invalid email or password.");
@@ -28,16 +26,10 @@ export default function LoginPage() {
   }
 
   return (
-    <main style={{ maxWidth: 400, margin: "4rem auto", fontFamily: "sans-serif" }}>
+    <main className="manuscript" style={{ paddingTop: "3rem", maxWidth: 380 }}>
       <h1>Log in</h1>
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-        <input
-          placeholder="Email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+        <input placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         <input
           placeholder="Password"
           type="password"
@@ -45,12 +37,12 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        <button type="submit" disabled={loading}>
+        <button type="submit" className="primary" disabled={loading}>
           {loading ? "Logging in..." : "Log in"}
         </button>
-        {error && <p style={{ color: "red" }}>{error}</p>}
+        {error && <p style={{ color: "var(--accent)" }}>{error}</p>}
       </form>
-      <p>
+      <p style={{ marginTop: "1.5rem" }}>
         No account yet? <Link href="/signup">Sign up</Link>
       </p>
     </main>

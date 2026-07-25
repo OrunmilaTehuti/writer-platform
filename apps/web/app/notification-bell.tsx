@@ -37,7 +37,6 @@ export default function NotificationBell() {
 
   useEffect(() => {
     load();
-    // Simple polling so notifications show up without a full page reload.
     const interval = setInterval(load, 15000);
     return () => clearInterval(interval);
   }, []);
@@ -53,26 +52,26 @@ export default function NotificationBell() {
 
   return (
     <div style={{ position: "relative", display: "inline-block" }}>
-      <button onClick={handleOpen}>
-        🔔 {unreadCount > 0 && <strong>({unreadCount})</strong>}
+      <button onClick={handleOpen} className="eyebrow">
+        Notifications{unreadCount > 0 ? ` (${unreadCount})` : ""}
       </button>
       {open && (
         <div
+          className="card"
           style={{
             position: "absolute",
-            top: "100%",
+            top: "calc(100% + 0.4rem)",
             right: 0,
-            background: "white",
-            border: "1px solid #ddd",
-            borderRadius: 4,
-            padding: "0.5rem",
+            padding: "0.75rem",
             width: 280,
             zIndex: 10,
           }}
         >
-          {notifications.length === 0 && <p style={{ color: "#888", margin: 0 }}>No notifications yet.</p>}
+          {notifications.length === 0 && (
+            <p style={{ color: "var(--ink-soft)", margin: 0 }}>No notifications yet.</p>
+          )}
           {notifications.map((n) => (
-            <p key={n.id} style={{ margin: "0.25rem 0", fontWeight: n.read ? "normal" : "bold" }}>
+            <p key={n.id} style={{ margin: "0.3rem 0", fontWeight: n.read ? 400 : 600, fontSize: "0.9rem" }}>
               {describe(n)}
             </p>
           ))}

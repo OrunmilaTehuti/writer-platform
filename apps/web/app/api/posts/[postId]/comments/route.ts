@@ -6,7 +6,7 @@ export async function GET(req: Request, { params }: { params: { postId: string }
   const comments = await prisma.comment.findMany({
     where: { postId: params.postId },
     orderBy: { createdAt: "asc" },
-    include: { author: { select: { id: true, handle: true, displayName: true } } },
+    include: { author: { select: { id: true, handle: true, displayName: true, avatarUrl: true } } },
   });
   return NextResponse.json({ comments });
 }
@@ -29,7 +29,7 @@ export async function POST(req: Request, { params }: { params: { postId: string 
 
   const comment = await prisma.comment.create({
     data: { body, authorId: userId, postId },
-    include: { author: { select: { id: true, handle: true, displayName: true } } },
+    include: { author: { select: { id: true, handle: true, displayName: true, avatarUrl: true } } },
   });
 
   // Notify the post's author, unless they're commenting on their own post.

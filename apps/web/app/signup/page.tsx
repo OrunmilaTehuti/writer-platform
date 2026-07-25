@@ -28,13 +28,7 @@ export default function SignupPage() {
       return;
     }
 
-    // Auto sign-in right after successful signup
-    const signInResult = await signIn("credentials", {
-      email: form.email,
-      password: form.password,
-      redirect: false,
-    });
-
+    const signInResult = await signIn("credentials", { email: form.email, password: form.password, redirect: false });
     setLoading(false);
     if (signInResult?.error) {
       setError("Account created, but sign-in failed. Try logging in.");
@@ -44,9 +38,9 @@ export default function SignupPage() {
   }
 
   return (
-    <main style={{ maxWidth: 400, margin: "4rem auto", fontFamily: "sans-serif" }}>
+    <main className="manuscript" style={{ paddingTop: "3rem", maxWidth: 380 }}>
       <h1>Sign up</h1>
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
         <input
           placeholder="Email"
           type="email"
@@ -73,10 +67,10 @@ export default function SignupPage() {
           onChange={(e) => setForm({ ...form, displayName: e.target.value })}
           required
         />
-        <button type="submit" disabled={loading}>
+        <button type="submit" className="primary" disabled={loading}>
           {loading ? "Creating account..." : "Sign up"}
         </button>
-        {error && <p style={{ color: "red" }}>{error}</p>}
+        {error && <p style={{ color: "var(--accent)" }}>{error}</p>}
       </form>
     </main>
   );

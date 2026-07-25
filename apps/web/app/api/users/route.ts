@@ -15,6 +15,7 @@ export async function GET() {
       id: true,
       handle: true,
       displayName: true,
+      avatarUrl: true,
       followedBy: { where: { followerId: userId }, select: { id: true } },
     },
     orderBy: { createdAt: "desc" },
@@ -25,6 +26,7 @@ export async function GET() {
     id: u.id,
     handle: u.handle,
     displayName: u.displayName,
+    avatarUrl: u.avatarUrl,
     isFollowing: u.followedBy.length > 0,
   }));
 

@@ -69,18 +69,18 @@ export default function DocumentsPage() {
     if (res.ok) load();
   }
 
-  if (loading) return <p>Loading documents...</p>;
+  if (loading) return <p>Loading projects...</p>;
 
   return (
     <main style={{ maxWidth: 700, margin: "2rem auto", fontFamily: "sans-serif", padding: "0 1rem" }}>
       <p>
         <Link href="/">← Back to feed</Link>
       </p>
-      <h1>My Documents</h1>
+      <h1>My Projects</h1>
 
       <form onSubmit={handleCreate} style={{ marginBottom: "1.5rem", display: "flex", gap: "0.5rem" }}>
         <input
-          placeholder="Document title"
+          placeholder="Project title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required
@@ -91,7 +91,7 @@ export default function DocumentsPage() {
           <option value="ACADEMIC">Academic</option>
         </select>
         <button type="submit" disabled={creating || !title.trim()}>
-          {creating ? "Creating..." : "New Document"}
+          {creating ? "Creating..." : "New Project"}
         </button>
       </form>
       {error && <p style={{ color: "red" }}>{error}</p>}
@@ -112,8 +112,8 @@ export default function DocumentsPage() {
         </div>
       )}
 
-      <h3>Your documents</h3>
-      {owned.length === 0 && <p style={{ color: "#666" }}>No documents yet - create one above.</p>}
+      <h3>Your projects</h3>
+      {owned.length === 0 && <p style={{ color: "#666" }}>No projects yet - create one above.</p>}
       {owned.map((d) => (
         <p key={d.id}>
           <Link href={`/editor/${d.id}`}>{d.title}</Link> <span style={{ color: "#888" }}>({d.format.toLowerCase()})</span>

@@ -20,7 +20,7 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
     take: 50,
     include: {
-      author: { select: { id: true, handle: true, displayName: true } },
+      author: { select: { id: true, handle: true, displayName: true, avatarUrl: true } },
       likes: { where: { userId }, select: { id: true } },
       _count: { select: { likes: true, comments: true } },
     },
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
 
   const post = await prisma.post.create({
     data: { type: "STATUS", body, authorId: userId },
-    include: { author: { select: { id: true, handle: true, displayName: true } } },
+    include: { author: { select: { id: true, handle: true, displayName: true, avatarUrl: true } } },
   });
 
   return NextResponse.json({
