@@ -4,6 +4,7 @@
   "main": "index.ts",
   "scripts": {
     "generate": "prisma generate",
+    "postinstall": "prisma generate",
     "push": "prisma db push",
     "studio": "prisma studio"
   },
