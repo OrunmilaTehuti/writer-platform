@@ -11,7 +11,7 @@ const LINE_HEIGHT = IN_TO_PT / 6;
 type ScreenplayNodeType = "sceneHeading" | "action" | "character" | "parenthetical" | "dialogue";
 
 interface PMTextNode {
-  type: string;
+  type?: string;
   text?: string;
   content?: PMTextNode[];
 }
