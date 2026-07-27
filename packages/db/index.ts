@@ -1,23 +1,26 @@
 import { PrismaClient } from "./generated/client";
-import { Pool, neonConfig } from "@neondatabase/serverless";
-import { PrismaNeon } from "@prisma/adapter-neon";
-import ws from "ws";
-
-// Using Prisma's Neon driver adapter instead of the default engine binary.
-// This connects over HTTP/WebSocket rather than a native binary + raw TCP
-// connection, which sidesteps the "Query Engine binary not found" class of
-// bundling issues entirely on serverless platforms like Vercel.
-neonConfig.webSocketConstructor = ws;
 
 const connectionString = process.env.DATABASE_URL || "";
+// Neon's serverless driver only speaks to Neon's own WebSocket proxy - it
+// can't connect to a plain local Postgres server. So: use the Neon driver
+// adapter (which avoids the native engine binary, needed for Vercel) only
+// when actually pointed at Neon; fall back to Prisma's normal client
+// (native engine, plain TCP) for local development against local Postgres.
+const isNeon = connectionString.includes("neon.tech");
 
-// Reuse a single client (and pool) across hot reloads in dev
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-function createPrismaClient() {
-  const pool = new Pool({ connectionString });
-  const adapter = new PrismaNeon(pool);
-  return new PrismaClient({ adapter });
+function createPrismaClient(): PrismaClient {
+  if (isNeon) {
+    const { Pool, neonConfig } = require("@neondatabase/serverless");
+    const { PrismaNeon } = require("@prisma/adapter-neon");
+    const ws = require("ws");
+    neonConfig.webSocketConstructor = ws;
+    const pool = new Pool({ connectionString });
+    const adapter = new PrismaNeon(pool);
+    return new PrismaClient({ adapter });
+  }
+  return new PrismaClient();
 }
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
