@@ -9,9 +9,13 @@
     "studio": "prisma studio"
   },
   "dependencies": {
-    "@prisma/client": "^5.19.0"
+    "@prisma/client": "^5.19.0",
+    "@prisma/adapter-neon": "^5.19.0",
+    "@neondatabase/serverless": "^0.10.0",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
-    "prisma": "^5.19.0"
+    "prisma": "^5.19.0",
+    "@types/ws": "^8.5.10"
   }
 }
