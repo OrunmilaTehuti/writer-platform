@@ -11,12 +11,6 @@ const nextConfig = {
     // (In Next.js 14.x this must live under `experimental` - it was only
     // promoted to a top-level option in Next.js 15.)
     outputFileTracingRoot: path.join(__dirname, "../../"),
-    // Prisma loads its engine binary dynamically at runtime rather than via
-    // a normal import/require, so Next's static bundler can't auto-detect
-    // it needs packaging - this forces it to be included regardless.
-    outputFileTracingIncludes: {
-      "/*": ["../../packages/db/generated/client/**/*"],
-    },
   },
 };
 
