@@ -13,7 +13,7 @@ const nextConfig = {
   // it needs packaging - this forces it to be included regardless.
   experimental: {
     outputFileTracingIncludes: {
-      "/api/**/*": ["../../packages/db/generated/client/**/*"],
+      "/*": ["../../packages/db/generated/client/**/*"],
     },
   },
 };
