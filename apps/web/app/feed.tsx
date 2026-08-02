@@ -37,6 +37,18 @@ interface DiscoverUser {
   isFollowing: boolean;
 }
 
+// Twitter-style relative time ("3m", "2h", "5d") instead of a full date.
+function timeAgo(dateStr: string) {
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "now";
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
+}
+
 function CommentsSection({ postId, onCommentAdded }: { postId: string; onCommentAdded: () => void }) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [draft, setDraft] = useState("");
@@ -68,17 +80,15 @@ function CommentsSection({ postId, onCommentAdded }: { postId: string; onComment
     setPosting(false);
   }
 
-  // Reply-as-mention: clicking Reply on a comment prefills the draft with
-  // that person's @handle, so replying automatically tags who it's for.
   function replyTo(author: Author) {
     setDraft(`@${author.handle} `);
   }
 
   return (
-    <div style={{ marginTop: "0.6rem", paddingLeft: "0.9rem", borderLeft: "2px solid var(--rule)" }}>
-      {loading && <p style={{ color: "var(--ink-soft)" }}>Loading comments...</p>}
+    <div style={{ marginTop: "0.6rem", paddingLeft: "3rem" }}>
+      {loading && <p style={{ color: "var(--ink-soft)" }}>Loading replies...</p>}
       {comments.map((c) => (
-        <div key={c.id} style={{ display: "flex", gap: "0.5rem", margin: "0.4rem 0" }}>
+        <div key={c.id} style={{ display: "flex", gap: "0.5rem", margin: "0.5rem 0" }}>
           <Avatar name={c.author.displayName} avatarUrl={c.author.avatarUrl} size="sm" />
           <div>
             <span style={{ fontSize: "0.92rem" }}>
@@ -87,8 +97,8 @@ function CommentsSection({ postId, onCommentAdded }: { postId: string; onComment
             <br />
             <button
               onClick={() => replyTo(c.author)}
-              className="eyebrow"
-              style={{ border: "none", background: "none", padding: 0 }}
+              className="tw-action-btn"
+              style={{ marginTop: "0.15rem" }}
             >
               Reply
             </button>
@@ -96,8 +106,8 @@ function CommentsSection({ postId, onCommentAdded }: { postId: string; onComment
         </div>
       ))}
       <form onSubmit={handleSubmit} style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-        <MentionInput value={draft} onChange={setDraft} placeholder="Write a comment... (@ to mention)" style={{}} />
-        <button type="submit" disabled={posting || !draft.trim()}>
+        <MentionInput value={draft} onChange={setDraft} placeholder="Post your reply" style={{}} />
+        <button type="submit" className="primary" disabled={posting || !draft.trim()}>
           Reply
         </button>
       </form>
@@ -183,80 +193,78 @@ export default function Feed() {
   if (loading) return <p style={{ color: "var(--ink-soft)" }}>Loading feed...</p>;
 
   return (
-    <div className="with-margin-rail">
-      <div>
-        <form onSubmit={handlePost} className="card" style={{ padding: "1rem", marginBottom: "1.75rem" }}>
-          <MentionInput
-            value={draft}
-            onChange={setDraft}
-            placeholder="Share an update with other writers... (@ to mention)"
-            multiline
-            rows={3}
-            maxLength={2000}
-          />
-          <div style={{ textAlign: "right", marginTop: "0.5rem" }}>
-            <button type="submit" className="primary" disabled={posting || !draft.trim()}>
-              {posting ? "Posting..." : "Post"}
-            </button>
+    <div style={{ display: "flex", gap: "2rem", justifyContent: "center" }}>
+      <div className="tw-feed">
+        <form onSubmit={handlePost} className="tw-composer">
+          <Avatar name="You" avatarUrl={null} />
+          <div style={{ flex: 1 }}>
+            <MentionInput
+              value={draft}
+              onChange={setDraft}
+              placeholder="What's on your page today?"
+              multiline
+              rows={2}
+              maxLength={2000}
+            />
+            <div style={{ textAlign: "right", marginTop: "0.5rem" }}>
+              <button type="submit" className="primary" disabled={posting || !draft.trim()} style={{ borderRadius: 999 }}>
+                {posting ? "Posting..." : "Post"}
+              </button>
+            </div>
           </div>
         </form>
 
         {posts.length === 0 && (
-          <p style={{ color: "var(--ink-soft)" }}>
-            No posts yet. Follow some writers on the right, or post your own update above.
+          <p style={{ color: "var(--ink-soft)", padding: "1rem" }}>
+            No posts yet. Follow some writers, or share your own update above.
           </p>
         )}
 
         {posts.map((post) => (
-          <div key={post.id} style={{ borderBottom: "1px solid var(--rule)", padding: "1rem 0" }}>
-            <div style={{ display: "flex", gap: "0.6rem" }}>
-              <Avatar name={post.author.displayName} avatarUrl={post.author.avatarUrl} />
-              <div style={{ flex: 1 }}>
-                <p style={{ margin: 0 }}>
-                  <strong>{post.author.displayName}</strong>{" "}
-                  <span className="eyebrow">@{post.author.handle}</span>
-                </p>
-                <p style={{ margin: "0.35rem 0" }}>{post.body}</p>
-                <div style={{ display: "flex", gap: "1rem" }}>
-                  <button
-                    onClick={() => toggleLike(post.id)}
-                    className="margin-mark"
-                    style={{ border: "none", background: "none", padding: 0 }}
-                  >
-                    {post.likedByMe ? "♥ liked" : "♡ like"} · {post.likeCount}
-                  </button>
-                  <button
-                    onClick={() => toggleComments(post.id)}
-                    className="eyebrow"
-                    style={{ border: "none", background: "none", padding: 0 }}
-                  >
-                    {post.commentCount} comment{post.commentCount === 1 ? "" : "s"}
-                  </button>
-                </div>
-                {openComments.has(post.id) && (
-                  <CommentsSection postId={post.id} onCommentAdded={() => bumpCommentCount(post.id)} />
-                )}
+          <div key={post.id} className="tw-post">
+            <Avatar name={post.author.displayName} avatarUrl={post.author.avatarUrl} />
+            <div className="tw-post-body">
+              <div className="tw-post-header">
+                <strong>{post.author.displayName}</strong>
+                <span className="eyebrow">@{post.author.handle}</span>
+                <span className="eyebrow">· {timeAgo(post.createdAt)}</span>
               </div>
+              <p style={{ margin: "0.15rem 0 0" }}>{post.body}</p>
+              <div className="tw-post-actions">
+                <button onClick={() => toggleComments(post.id)} className="tw-action-btn">
+                  💬 {post.commentCount || ""}
+                </button>
+                <button
+                  onClick={() => toggleLike(post.id)}
+                  className={`tw-action-btn ${post.likedByMe ? "liked" : ""}`}
+                >
+                  {post.likedByMe ? "♥" : "♡"} {post.likeCount || ""}
+                </button>
+              </div>
+              {openComments.has(post.id) && (
+                <CommentsSection postId={post.id} onCommentAdded={() => bumpCommentCount(post.id)} />
+              )}
             </div>
           </div>
         ))}
       </div>
 
-      <aside>
-        <h3 className="eyebrow">Discover writers</h3>
-        {users.length === 0 && <p style={{ color: "var(--ink-soft)" }}>No other writers have signed up yet.</p>}
-        {users.map((u) => (
-          <div key={u.id} style={{ marginBottom: "0.6rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>
-            <Avatar name={u.displayName} avatarUrl={u.avatarUrl} size="sm" />
-            <div>
-              <span>{u.displayName}</span>
-              <br />
-              <button onClick={() => toggleFollow(u.id)} style={{ marginTop: "0.2rem" }}>
-                {u.isFollowing ? "Unfollow" : "Follow"}
-              </button>
+      <aside style={{ width: 240, flexShrink: 0 }} className="card">
+        <div style={{ padding: "1rem" }}>
+          <h3 className="eyebrow">Discover writers</h3>
+          {users.length === 0 && <p style={{ color: "var(--ink-soft)" }}>No other writers have signed up yet.</p>}
+          {users.map((u) => (
+            <div key={u.id} style={{ marginBottom: "0.8rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              <Avatar name={u.displayName} avatarUrl={u.avatarUrl} size="sm" />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: "0.9rem" }}>{u.displayName}</div>
+                <button onClick={() => toggleFollow(u.id)} style={{ marginTop: "0.2rem", borderRadius: 999 }}>
+                  {u.isFollowing ? "Unfollow" : "Follow"}
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </aside>
     </div>
   );

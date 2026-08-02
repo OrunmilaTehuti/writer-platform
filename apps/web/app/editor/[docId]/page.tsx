@@ -26,16 +26,23 @@ interface DocMeta {
   isOwner: boolean;
 }
 
-/**
- * Split into an outer loader + inner editor on purpose: the Tiptap editor
- * instance locks in its node schema (which extensions/format it supports)
- * the moment it's created. If it mounted before we knew the document's
- * real format, it would be stuck with the wrong schema (e.g. missing
- * screenplay nodes) for its whole lifetime - which also broke sync with
- * collaborators who *did* have the right schema. So EditorInner only ever
- * mounts once docMeta is already loaded, guaranteeing the correct format
- * from the very first render.
- */
+interface FootnoteEntry {
+  index: number;
+  note: string;
+}
+
+// Walks the doc JSON in order and collects footnote nodes, so the
+// "Footnotes" list below the editor always matches reading order -
+// numbering is derived, never stored, so it can't drift out of sync.
+function collectFootnotes(node: any, out: FootnoteEntry[] = []): FootnoteEntry[] {
+  if (!node) return out;
+  if (node.type === "footnote") {
+    out.push({ index: out.length + 1, note: node.attrs?.note || "" });
+  }
+  (node.content || []).forEach((child: any) => collectFootnotes(child, out));
+  return out;
+}
+
 export default function EditorPage({ params }: { params: { docId: string } }) {
   const [docMeta, setDocMeta] = useState<DocMeta | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -66,6 +73,7 @@ function EditorInner({ docId, docMeta }: { docId: string; docMeta: DocMeta }) {
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [footnotes, setFootnotes] = useState<FootnoteEntry[]>([]);
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const user = useMemo(() => {
@@ -84,6 +92,9 @@ function EditorInner({ docId, docMeta }: { docId: string; docMeta: DocMeta }) {
     if (!editor) return;
 
     const handler = () => {
+      if (docMeta.format === "ACADEMIC") {
+        setFootnotes(collectFootnotes(editor.getJSON()));
+      }
       setSaveStatus("saving");
       if (saveTimeout.current) clearTimeout(saveTimeout.current);
       saveTimeout.current = setTimeout(async () => {
@@ -96,12 +107,13 @@ function EditorInner({ docId, docMeta }: { docId: string; docMeta: DocMeta }) {
       }, 2000);
     };
 
+    handler(); // populate footnotes list on first load too
     editor.on("update", handler);
     return () => {
       editor.off("update", handler);
       if (saveTimeout.current) clearTimeout(saveTimeout.current);
     };
-  }, [editor, docId]);
+  }, [editor, docId, docMeta.format]);
 
   async function handleExport() {
     if (!editor) return;
@@ -135,20 +147,28 @@ function EditorInner({ docId, docMeta }: { docId: string; docMeta: DocMeta }) {
     setInviting(false);
   }
 
+  function insertFootnote() {
+    if (!editor) return;
+    const note = window.prompt("Footnote text:");
+    if (!note) return;
+    editor.chain().focus().insertContent({ type: "footnote", attrs: { note } }).run();
+  }
+
   if (sessionStatus === "loading") return <p>Loading...</p>;
 
   const format = docMeta.format;
+  const contentClass =
+    format === "SCREENPLAY" ? "screenplay-editor" : format === "ACADEMIC" ? "academic-editor" : "blog-editor";
 
   return (
-    <main style={{ maxWidth: 720, margin: "2rem auto", fontFamily: "sans-serif" }}>
+    <main style={{ maxWidth: 800, margin: "2rem auto", padding: "0 1.25rem" }}>
       <h2>{docMeta.title}</h2>
       <p>
         Editing as: <strong>{user.name}</strong>{" "}
         {!session?.user && "(guest - log in to save documents to your account)"}
       </p>
-      <p>
-        Format: <strong>{format}</strong> · Collab status: <strong>{status}</strong> · Save:{" "}
-        <strong>{saveStatus}</strong>
+      <p className="eyebrow">
+        Format: {format} · Collab: {status} · Save: {saveStatus}
         {format === "SCREENPLAY" && (
           <>
             {" "}
@@ -170,17 +190,18 @@ function EditorInner({ docId, docMeta }: { docId: string; docMeta: DocMeta }) {
           <button type="submit" disabled={inviting || !inviteHandle.trim()}>
             {inviting ? "Inviting..." : "Invite"}
           </button>
-          {inviteMessage && <span style={{ color: "#666" }}>{inviteMessage}</span>}
+          {inviteMessage && <span style={{ color: "var(--ink-soft)" }}>{inviteMessage}</span>}
         </form>
       )}
 
+      {/* Screenplay element-type toolbar */}
       {format === "SCREENPLAY" && editor && (
-        <div style={{ marginBottom: "0.5rem", display: "flex", gap: "0.5rem" }}>
+        <div className="format-toolbar">
           {SCREENPLAY_ELEMENTS.map(({ type, label }) => (
             <button
               key={type}
               onClick={() => editor.chain().focus().setNode(type).run()}
-              style={{ fontWeight: editor.isActive(type) ? "bold" : "normal" }}
+              className={editor.isActive(type) ? "is-active" : ""}
             >
               {label}
             </button>
@@ -188,8 +209,49 @@ function EditorInner({ docId, docMeta }: { docId: string; docMeta: DocMeta }) {
         </div>
       )}
 
-      <div style={{ border: "1px solid #ddd", borderRadius: 4, padding: "1rem", minHeight: 400 }}>
+      {/* Rich-text toolbar for Blog / Academic */}
+      {(format === "BLOG" || format === "ACADEMIC") && editor && (
+        <div className="format-toolbar">
+          <button onClick={() => editor.chain().focus().toggleBold().run()} className={editor.isActive("bold") ? "is-active" : ""}>
+            <strong>B</strong>
+          </button>
+          <button onClick={() => editor.chain().focus().toggleItalic().run()} className={editor.isActive("italic") ? "is-active" : ""}>
+            <em>I</em>
+          </button>
+          <button onClick={() => editor.chain().focus().toggleUnderline().run()} className={editor.isActive("underline") ? "is-active" : ""}>
+            <u>U</u>
+          </button>
+          <button onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} className={editor.isActive("heading", { level: 1 }) ? "is-active" : ""}>
+            H1
+          </button>
+          <button onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={editor.isActive("heading", { level: 2 }) ? "is-active" : ""}>
+            H2
+          </button>
+          <button onClick={() => editor.chain().focus().toggleBulletList().run()} className={editor.isActive("bulletList") ? "is-active" : ""}>
+            • List
+          </button>
+          <button onClick={() => editor.chain().focus().toggleOrderedList().run()} className={editor.isActive("orderedList") ? "is-active" : ""}>
+            1. List
+          </button>
+          <button onClick={() => editor.chain().focus().toggleBlockquote().run()} className={editor.isActive("blockquote") ? "is-active" : ""}>
+            " Quote
+          </button>
+          {format === "ACADEMIC" && <button onClick={insertFootnote}>+ Footnote</button>}
+        </div>
+      )}
+
+      <div className={contentClass} style={{ border: "1px solid var(--rule)", borderRadius: 4, padding: "1.25rem", minHeight: 400 }}>
         <EditorContent editor={editor} />
+        {format === "ACADEMIC" && footnotes.length > 0 && (
+          <div className="academic-footnotes">
+            <strong className="eyebrow">Footnotes</strong>
+            <ol>
+              {footnotes.map((f) => (
+                <li key={f.index}>{f.note}</li>
+              ))}
+            </ol>
+          </div>
+        )}
       </div>
     </main>
   );

@@ -149,9 +149,6 @@ input:focus, textarea:focus, select:focus {
   padding: 0 1.25rem;
 }
 
-/* Margin-rail annotations: likes/comments render as small red-pen marks
-   beside content on wide screens, matching an editor's actual marginalia
-   rather than generic inline social icons. */
 .with-margin-rail {
   display: grid;
   grid-template-columns: 1fr;
@@ -215,4 +212,160 @@ input:focus, textarea:focus, select:focus {
 }
 .mention-option:hover, .mention-option.active {
   background: var(--accent-soft);
+}
+
+/* ---- Screenplay WYSIWYG ----
+   12pt Courier is precisely 10 characters per inch, so "ch" units here
+   keep on-screen indents proportional to the real page margins used in
+   the PDF export (packages/editor/src/formats/screenplay.ts). What you
+   see while typing is the same shape as what you'll download. */
+.screenplay-editor {
+  font-family: "Courier Prime", monospace;
+  font-size: 14px;
+  line-height: 1.7;
+  max-width: 60ch;
+  margin: 0 auto;
+}
+.screenplay-scene-heading {
+  text-transform: uppercase;
+  font-weight: 700;
+  margin: 1.4em 0 0;
+}
+.screenplay-action {
+  margin: 1em 0 0;
+}
+.screenplay-character {
+  text-transform: uppercase;
+  margin: 1.4em 0 0 22ch;
+}
+.screenplay-parenthetical {
+  margin: 0 0 0 18ch;
+  color: var(--ink-soft);
+}
+.screenplay-dialogue {
+  margin: 0 0 0 10ch;
+  max-width: 35ch;
+}
+
+/* ---- Formatting toolbar (Blog / Academic) ---- */
+.format-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--rule);
+}
+.format-toolbar button {
+  padding: 0.3em 0.6em;
+  font-size: 0.85rem;
+  min-width: 2.2em;
+}
+.format-toolbar button.is-active {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+
+/* ---- Academic doc styling (MS Word-like page feel) ---- */
+.academic-editor {
+  font-family: var(--font-body), serif;
+  max-width: 65ch;
+  margin: 0 auto;
+  line-height: 1.8;
+}
+.academic-footnote-ref {
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 600;
+  vertical-align: super;
+  font-size: 0.75em;
+}
+.academic-footnotes {
+  margin-top: 2rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+/* ---- Blog doc styling (WordPress-like reading feel) ---- */
+.blog-editor {
+  max-width: 65ch;
+  margin: 0 auto;
+  font-size: 1.05rem;
+  line-height: 1.75;
+}
+.blog-editor h1, .blog-editor h2, .blog-editor h3 {
+  margin-top: 1.2em;
+}
+.blog-editor blockquote {
+  border-left: 3px solid var(--accent);
+  margin-left: 0;
+  padding-left: 1rem;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+/* ---- Twitter/X-style feed ---- */
+.tw-feed {
+  max-width: 600px;
+  margin: 0 auto;
+  border-left: 1px solid var(--rule);
+  border-right: 1px solid var(--rule);
+}
+.tw-composer {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--rule);
+}
+.tw-composer textarea {
+  border-bottom: none;
+  font-size: 1.15rem;
+  min-height: 60px;
+}
+.tw-post {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--rule);
+  transition: background 0.1s ease;
+}
+.tw-post:hover {
+  background: var(--paper-raised);
+}
+.tw-post-body {
+  flex: 1;
+  min-width: 0;
+}
+.tw-post-header {
+  display: flex;
+  gap: 0.4rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.tw-post-actions {
+  display: flex;
+  gap: 2.2rem;
+  margin-top: 0.6rem;
+  max-width: 340px;
+}
+.tw-action-btn {
+  border: none;
+  background: none;
+  padding: 0.2rem 0.4rem;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+}
+.tw-action-btn:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.tw-action-btn.liked {
+  color: var(--accent);
 }

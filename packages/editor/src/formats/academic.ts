@@ -13,7 +13,7 @@ export const Citation = Node.create({
   addAttributes() {
     return {
       bibKey: { default: null },
-      label: { default: "[?]" }, // display fallback until resolved, e.g. "[3]" or "(Smith, 2021)"
+      label: { default: "[?]" },
     };
   },
   parseHTML() {
@@ -28,7 +28,35 @@ export const Citation = Node.create({
   },
 });
 
-export const academicExtensions = [Citation];
+/**
+ * Footnote node. The note text is stored directly on the node as an
+ * attribute (rather than a separate document section), so the marker and
+ * its content always travel together and can't drift out of sync. The
+ * editor renders a live "Footnotes" list below the document by walking
+ * the doc for these nodes in order - see FootnoteList in the app.
+ */
+export const Footnote = Node.create({
+  name: "footnote",
+  group: "inline",
+  inline: true,
+  atom: true,
+  addAttributes() {
+    return {
+      note: { default: "" },
+    };
+  },
+  parseHTML() {
+    return [{ tag: "span[data-type=footnote]" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return [
+      "span",
+      mergeAttributes(HTMLAttributes, { "data-type": "footnote", class: "academic-footnote-ref" }),
+      "•",
+    ];
+  },
+});
 
-// Supported citation styles for export - resolved against the doc's .bib entries
+export const academicExtensions = [Citation, Footnote];
+
 export const citationStyles = ["apa", "mla", "chicago", "ieee"] as const;

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import Underline from "@tiptap/extension-underline";
 import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
 import * as Y from "yjs";
@@ -14,23 +15,17 @@ export type DocumentFormat = "SCREENPLAY" | "BLOG" | "ACADEMIC";
 
 const formatExtensions: Record<DocumentFormat, any[]> = {
   SCREENPLAY: screenplayExtensions,
-  BLOG: blogExtensions,
-  ACADEMIC: academicExtensions,
+  BLOG: [...blogExtensions, Underline],
+  ACADEMIC: [...academicExtensions, Underline],
 };
 
 interface UseCollaborativeEditorOptions {
   documentId: string;
   format: DocumentFormat;
   user: { name: string; color: string };
-  /** e.g. ws://localhost:1234 in dev, wss://your-collab-server in prod */
   collabServerUrl: string;
 }
 
-/**
- * One hook, three format modes. The Yjs doc + WebSocket provider handle
- * conflict-free multi-user editing; StarterKit + format-specific nodes
- * handle what the content is allowed to look like.
- */
 export function useCollaborativeEditor({
   documentId,
   format,
@@ -56,13 +51,10 @@ export function useCollaborativeEditor({
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit.configure({ history: false }), // Yjs owns undo/redo history
+      StarterKit.configure({ history: false }),
       ...formatExtensions[format],
       Collaboration.configure({ document: ydoc }),
-      CollaborationCursor.configure({
-        provider,
-        user,
-      }),
+      CollaborationCursor.configure({ provider, user }),
     ],
   });
 
