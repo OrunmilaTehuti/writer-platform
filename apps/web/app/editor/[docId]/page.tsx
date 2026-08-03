@@ -8,6 +8,7 @@ import {
   exportScreenplayToPdf,
   exportAcademicToPdf,
   exportAcademicToDocx,
+  exportBlogToHtmlFile,
   type DocumentFormat,
 } from "@writer-platform/editor";
 
@@ -26,6 +27,7 @@ interface DocMeta {
   title: string;
   format: DocumentFormat;
   isOwner: boolean;
+  isPublic: boolean;
   references: Source[];
 }
 
@@ -94,6 +96,9 @@ function EditorInner({ docId, docMeta }: { docId: string; docMeta: DocMeta }) {
   const [footnotes, setFootnotes] = useState<FootnoteEntry[]>([]);
   const [citedKeys, setCitedKeys] = useState<string[]>([]);
   const [sources, setSources] = useState<Source[]>(docMeta.references || []);
+  const [isPublic, setIsPublic] = useState(docMeta.isPublic);
+  const [publishing, setPublishing] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [showReferences, setShowReferences] = useState(false);
   const [newSource, setNewSource] = useState({ author: "", title: "", year: "" });
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -192,6 +197,42 @@ function EditorInner({ docId, docMeta }: { docId: string; docMeta: DocMeta }) {
     URL.revokeObjectURL(url);
   }
 
+  function handleBlogExport() {
+    if (!editor) return;
+    const html = exportBlogToHtmlFile(editor.getJSON(), docMeta.title);
+    download(html, "text/html", `${docMeta.title}.html`);
+  }
+
+  async function togglePublish() {
+    setPublishing(true);
+    const next = !isPublic;
+    const res = await fetch(`/api/documents/${docId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isPublic: next }),
+    });
+    if (res.ok) setIsPublic(next);
+    setPublishing(false);
+  }
+
+  async function shareToFeed() {
+    if (!isPublic) {
+      window.alert("Publish this post first, then you can share it to your feed.");
+      return;
+    }
+    const caption = window.prompt(`Say something about "${docMeta.title}" for your feed post:`, `Just published: ${docMeta.title}`);
+    if (!caption) return;
+    setSharing(true);
+    const res = await fetch("/api/posts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: caption, documentId: docId }),
+    });
+    setSharing(false);
+    if (res.ok) window.alert("Shared to your feed!");
+    else window.alert("Couldn't share this post - try again.");
+  }
+
   async function handleAcademicExport(kind: "pdf" | "docx") {
     if (!editor) return;
     setExporting(true);
@@ -247,6 +288,7 @@ function EditorInner({ docId, docMeta }: { docId: string; docMeta: DocMeta }) {
       </p>
       <p className="eyebrow">
         Format: {format} · Collab: {status} · Save: {saveStatus}
+        {format === "BLOG" && isPublic && <> · <span style={{ color: "var(--accent)" }}>Published</span></>}
         {format === "SCREENPLAY" && (
           <>
             {" "}
@@ -266,6 +308,23 @@ function EditorInner({ docId, docMeta }: { docId: string; docMeta: DocMeta }) {
             <button onClick={() => handleAcademicExport("docx")} disabled={exporting}>
               {exporting ? "Exporting..." : "Export Word"}
             </button>
+          </>
+        )}
+        {format === "BLOG" && (
+          <>
+            {" "}
+            ·{" "}
+            <button onClick={handleBlogExport}>Export HTML</button>{" "}
+            {docMeta.isOwner && (
+              <>
+                <button onClick={togglePublish} disabled={publishing}>
+                  {publishing ? "..." : isPublic ? "Unpublish" : "Publish"}
+                </button>{" "}
+                <button onClick={shareToFeed} disabled={sharing || !isPublic}>
+                  {sharing ? "Sharing..." : "Share to Feed"}
+                </button>
+              </>
+            )}
           </>
         )}
       </p>

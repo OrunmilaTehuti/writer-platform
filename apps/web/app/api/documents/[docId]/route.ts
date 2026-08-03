@@ -39,6 +39,7 @@ export async function GET(req: Request, { params }: { params: { docId: string } 
     format: doc.format,
     content: doc.content,
     references: doc.references || [],
+    isPublic: doc.isPublic,
     ownerId: doc.ownerId,
     isOwner: doc.ownerId === userId,
   });
@@ -55,9 +56,9 @@ export async function PATCH(req: Request, { params }: { params: { docId: string 
   if (!doc) return NextResponse.json({ error: "Document not found." }, { status: 404 });
   if (!canEdit) return NextResponse.json({ error: "You don't have edit access to this document." }, { status: 403 });
 
-  const { content, references } = await req.json();
-  if (content === undefined && references === undefined) {
-    return NextResponse.json({ error: "content or references is required." }, { status: 400 });
+  const { content, references, isPublic } = await req.json();
+  if (content === undefined && references === undefined && isPublic === undefined) {
+    return NextResponse.json({ error: "content, references, or isPublic is required." }, { status: 400 });
   }
 
   await prisma.document.update({
@@ -65,6 +66,7 @@ export async function PATCH(req: Request, { params }: { params: { docId: string 
     data: {
       ...(content !== undefined ? { content } : {}),
       ...(references !== undefined ? { references } : {}),
+      ...(isPublic !== undefined ? { isPublic } : {}),
     },
   });
 

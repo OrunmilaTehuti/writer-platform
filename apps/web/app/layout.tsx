@@ -15,7 +15,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter", weight: ["40
 const courierPrime = Courier_Prime({ subsets: ["latin"], variable: "--font-courier-prime", weight: ["400", "700"] });
 
 export const metadata: Metadata = {
-  title: "Writer Platform",
+  title: "Scribes Meet",
   description: "Write, format, and share screenplays, blog posts, and academic writing.",
 };
 

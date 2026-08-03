@@ -6,3 +6,4 @@ export { blogExtensions } from "./formats/blog";
 export { exportScreenplayToPdf } from "./export/screenplayPdf";
 export { exportAcademicToPdf } from "./export/academicPdf";
 export { exportAcademicToDocx } from "./export/academicDocx";
+export { blogToHtml, exportBlogToHtmlFile } from "./export/blogHtml";

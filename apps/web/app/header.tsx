@@ -46,15 +46,14 @@ export default function Header() {
             textDecoration: "none",
           }}
         >
-          Writer Platform
+          Scribes Meet
         </Link>
-        {session?.user && (
-          <nav style={{ display: "flex", gap: "1rem" }} className="eyebrow">
-            {navLink("/", "Feed")}
-            {navLink("/documents", "My Projects")}
-            {navLink("/profile", "Profile")}
-          </nav>
-        )}
+        <nav style={{ display: "flex", gap: "1rem" }} className="eyebrow">
+          {navLink("/bloggers", "Bloggers")}
+          {session?.user && navLink("/", "Feed")}
+          {session?.user && navLink("/documents", "My Projects")}
+          {session?.user && navLink("/profile", "Profile")}
+        </nav>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
         <FontPicker />

@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Avatar } from "./avatar";
 import { MentionInput } from "./mention-input";
+import { AdSlot } from "./ad-slot";
 
 interface Author {
   id: string;
@@ -17,6 +19,7 @@ interface Post {
   body: string | null;
   createdAt: string;
   author: Author;
+  document?: { id: string; title: string; isPublic: boolean } | null;
   likeCount: number;
   commentCount: number;
   likedByMe: boolean;
@@ -230,6 +233,11 @@ export default function Feed() {
                 <span className="eyebrow">· {timeAgo(post.createdAt)}</span>
               </div>
               <p style={{ margin: "0.15rem 0 0" }}>{post.body}</p>
+              {post.document?.isPublic && (
+                <Link href={`/bloggers/${post.document.id}`} className="eyebrow" style={{ display: "inline-block", marginTop: "0.3rem" }}>
+                  Read "{post.document.title}" →
+                </Link>
+              )}
               <div className="tw-post-actions">
                 <button onClick={() => toggleComments(post.id)} className="tw-action-btn">
                   💬 {post.commentCount || ""}
@@ -249,8 +257,9 @@ export default function Feed() {
         ))}
       </div>
 
-      <aside style={{ width: 240, flexShrink: 0 }} className="card">
-        <div style={{ padding: "1rem" }}>
+      <aside style={{ width: 240, flexShrink: 0 }}>
+        <AdSlot />
+        <div className="card" style={{ padding: "1rem" }}>
           <h3 className="eyebrow">Discover writers</h3>
           {users.length === 0 && <p style={{ color: "var(--ink-soft)" }}>No other writers have signed up yet.</p>}
           {users.map((u) => (
