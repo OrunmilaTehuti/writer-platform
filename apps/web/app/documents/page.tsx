@@ -16,6 +16,12 @@ interface PendingInvite {
   document: { id: string; title: string; format: string; owner: { displayName: string } };
 }
 
+const FORMAT_ICON: Record<string, string> = {
+  SCREENPLAY: "🎬",
+  BLOG: "📝",
+  ACADEMIC: "🎓",
+};
+
 export default function DocumentsPage() {
   const [owned, setOwned] = useState<DocSummary[]>([]);
   const [collaboratingOn, setCollaboratingOn] = useState<DocSummary[]>([]);
@@ -69,36 +75,34 @@ export default function DocumentsPage() {
     if (res.ok) load();
   }
 
-  if (loading) return <p>Loading projects...</p>;
+  if (loading) return <p style={{ color: "var(--ink-soft)" }}>Loading projects...</p>;
 
   return (
-    <main style={{ maxWidth: 700, margin: "2rem auto", fontFamily: "sans-serif", padding: "0 1rem" }}>
-      <p>
-        <Link href="/">← Back to feed</Link>
-      </p>
+    <main className="manuscript" style={{ paddingTop: "2rem", paddingBottom: "3rem" }}>
       <h1>My Projects</h1>
 
-      <form onSubmit={handleCreate} style={{ marginBottom: "1.5rem", display: "flex", gap: "0.5rem" }}>
+      <form onSubmit={handleCreate} className="card" style={{ padding: "1rem", marginBottom: "1.75rem", display: "flex", gap: "0.5rem" }}>
         <input
           placeholder="Project title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required
+          style={{ flex: 1 }}
         />
         <select value={format} onChange={(e) => setFormat(e.target.value)}>
           <option value="BLOG">Blog</option>
           <option value="SCREENPLAY">Screenplay</option>
           <option value="ACADEMIC">Academic</option>
         </select>
-        <button type="submit" disabled={creating || !title.trim()}>
+        <button type="submit" className="primary" disabled={creating || !title.trim()}>
           {creating ? "Creating..." : "New Project"}
         </button>
       </form>
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {error && <p style={{ color: "var(--accent)" }}>{error}</p>}
 
       {pendingInvites.length > 0 && (
-        <div style={{ marginBottom: "1.5rem", padding: "0.75rem", background: "#f7f7f7", borderRadius: 4 }}>
-          <h3>Pending invites</h3>
+        <div className="card" style={{ padding: "1rem", marginBottom: "1.75rem" }}>
+          <h3 className="eyebrow">Pending invites</h3>
           {pendingInvites.map((inv) => (
             <div key={inv.id} style={{ marginBottom: "0.5rem" }}>
               <span>
@@ -112,25 +116,32 @@ export default function DocumentsPage() {
         </div>
       )}
 
-      <h3>Your projects</h3>
-      {owned.length === 0 && <p style={{ color: "#666" }}>No projects yet - create one above.</p>}
-      {owned.map((d) => (
-        <p key={d.id}>
-          <Link href={`/editor/${d.id}`}>{d.title}</Link> <span style={{ color: "#888" }}>({d.format.toLowerCase()})</span>
-        </p>
-      ))}
+      <h3 className="eyebrow">Your projects</h3>
+      {owned.length === 0 && <p style={{ color: "var(--ink-soft)" }}>No projects yet - create one above.</p>}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "1rem", marginBottom: "1.75rem" }}>
+        {owned.map((d) => (
+          <Link href={`/editor/${d.id}`} key={d.id} className="card" style={{ padding: "1rem", textDecoration: "none" }}>
+            <div style={{ fontSize: "1.6rem" }}>{FORMAT_ICON[d.format] || "📄"}</div>
+            <div style={{ fontWeight: 600, marginTop: "0.4rem" }}>{d.title}</div>
+            <div className="eyebrow" style={{ marginTop: "0.2rem" }}>{d.format.toLowerCase()}</div>
+          </Link>
+        ))}
+      </div>
 
       {collaboratingOn.length > 0 && (
         <>
-          <h3>Collaborating on</h3>
-          {collaboratingOn.map((d) => (
-            <p key={d.id}>
-              <Link href={`/editor/${d.id}`}>{d.title}</Link>{" "}
-              <span style={{ color: "#888" }}>
-                ({d.format.toLowerCase()}, owned by {d.owner?.displayName})
-              </span>
-            </p>
-          ))}
+          <h3 className="eyebrow">Collaborating on</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "1rem" }}>
+            {collaboratingOn.map((d) => (
+              <Link href={`/editor/${d.id}`} key={d.id} className="card" style={{ padding: "1rem", textDecoration: "none" }}>
+                <div style={{ fontSize: "1.6rem" }}>{FORMAT_ICON[d.format] || "📄"}</div>
+                <div style={{ fontWeight: 600, marginTop: "0.4rem" }}>{d.title}</div>
+                <div className="eyebrow" style={{ marginTop: "0.2rem" }}>
+                  {d.format.toLowerCase()} · owned by {d.owner?.displayName}
+                </div>
+              </Link>
+            ))}
+          </div>
         </>
       )}
     </main>

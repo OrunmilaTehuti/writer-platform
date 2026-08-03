@@ -11,7 +11,8 @@
     "@tiptap/extension-underline": "^2.6.0",
     "yjs": "^13.6.18",
     "y-websocket": "^2.0.4",
-    "pdf-lib": "^1.17.1"
+    "pdf-lib": "^1.17.1",
+    "docx": "^9.0.2"
   },
   "peerDependencies": {
     "react": "^18.0.0",

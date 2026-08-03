@@ -6,6 +6,8 @@ import { EditorContent } from "@tiptap/react";
 import {
   useCollaborativeEditor,
   exportScreenplayToPdf,
+  exportAcademicToPdf,
+  exportAcademicToDocx,
   type DocumentFormat,
 } from "@writer-platform/editor";
 
@@ -24,6 +26,14 @@ interface DocMeta {
   title: string;
   format: DocumentFormat;
   isOwner: boolean;
+  references: Source[];
+}
+
+interface Source {
+  key: string;
+  author: string;
+  title: string;
+  year: string;
 }
 
 interface FootnoteEntry {
@@ -31,15 +41,23 @@ interface FootnoteEntry {
   note: string;
 }
 
-// Walks the doc JSON in order and collects footnote nodes, so the
-// "Footnotes" list below the editor always matches reading order -
-// numbering is derived, never stored, so it can't drift out of sync.
 function collectFootnotes(node: any, out: FootnoteEntry[] = []): FootnoteEntry[] {
   if (!node) return out;
   if (node.type === "footnote") {
     out.push({ index: out.length + 1, note: node.attrs?.note || "" });
   }
   (node.content || []).forEach((child: any) => collectFootnotes(child, out));
+  return out;
+}
+
+// Collects which citation bibKeys actually appear in the doc, in order of
+// first appearance - used to only show sources that are really cited.
+function collectCitedKeys(node: any, out: string[] = []): string[] {
+  if (!node) return out;
+  if (node.type === "citation" && node.attrs?.bibKey && !out.includes(node.attrs.bibKey)) {
+    out.push(node.attrs.bibKey);
+  }
+  (node.content || []).forEach((child: any) => collectCitedKeys(child, out));
   return out;
 }
 
@@ -74,6 +92,10 @@ function EditorInner({ docId, docMeta }: { docId: string; docMeta: DocMeta }) {
   const [inviting, setInviting] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [footnotes, setFootnotes] = useState<FootnoteEntry[]>([]);
+  const [citedKeys, setCitedKeys] = useState<string[]>([]);
+  const [sources, setSources] = useState<Source[]>(docMeta.references || []);
+  const [showReferences, setShowReferences] = useState(false);
+  const [newSource, setNewSource] = useState({ author: "", title: "", year: "" });
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const user = useMemo(() => {
@@ -94,6 +116,7 @@ function EditorInner({ docId, docMeta }: { docId: string; docMeta: DocMeta }) {
     const handler = () => {
       if (docMeta.format === "ACADEMIC") {
         setFootnotes(collectFootnotes(editor.getJSON()));
+        setCitedKeys(collectCitedKeys(editor.getJSON()));
       }
       setSaveStatus("saving");
       if (saveTimeout.current) clearTimeout(saveTimeout.current);
@@ -107,7 +130,7 @@ function EditorInner({ docId, docMeta }: { docId: string; docMeta: DocMeta }) {
       }, 2000);
     };
 
-    handler(); // populate footnotes list on first load too
+    handler();
     editor.on("update", handler);
     return () => {
       editor.off("update", handler);
@@ -115,7 +138,34 @@ function EditorInner({ docId, docMeta }: { docId: string; docMeta: DocMeta }) {
     };
   }, [editor, docId, docMeta.format]);
 
-  async function handleExport() {
+  async function saveSources(next: Source[]) {
+    setSources(next);
+    await fetch(`/api/documents/${docId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ references: next }),
+    });
+  }
+
+  function addSource(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newSource.author.trim() || !newSource.title.trim()) return;
+    const key = `${newSource.author.split(" ").pop()?.toLowerCase() || "src"}${newSource.year || ""}`;
+    saveSources([...sources, { key, ...newSource }]);
+    setNewSource({ author: "", title: "", year: "" });
+  }
+
+  function removeSource(key: string) {
+    saveSources(sources.filter((s) => s.key !== key));
+  }
+
+  function insertCitation(source: Source) {
+    if (!editor) return;
+    const label = `(${source.author.split(" ").pop() || "?"}, ${source.year || "n.d."})`;
+    editor.chain().focus().insertContent({ type: "citation", attrs: { bibKey: source.key, label } }).run();
+  }
+
+  async function handleScreenplayExport() {
     if (!editor) return;
     setExporting(true);
     try {
@@ -127,6 +177,32 @@ function EditorInner({ docId, docMeta }: { docId: string; docMeta: DocMeta }) {
       a.download = `${docMeta.title}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  function download(blobPart: BlobPart, mime: string, filename: string) {
+    const blob = new Blob([blobPart], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleAcademicExport(kind: "pdf" | "docx") {
+    if (!editor) return;
+    setExporting(true);
+    try {
+      if (kind === "pdf") {
+        const pdfBytes = await exportAcademicToPdf(editor.getJSON(), docMeta.title, sources);
+        download(pdfBytes as BlobPart, "application/pdf", `${docMeta.title}.pdf`);
+      } else {
+        const blob = await exportAcademicToDocx(editor.getJSON(), docMeta.title, sources);
+        download(blob, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", `${docMeta.title}.docx`);
+      }
     } finally {
       setExporting(false);
     }
@@ -160,6 +236,8 @@ function EditorInner({ docId, docMeta }: { docId: string; docMeta: DocMeta }) {
   const contentClass =
     format === "SCREENPLAY" ? "screenplay-editor" : format === "ACADEMIC" ? "academic-editor" : "blog-editor";
 
+  const citedSources = sources.filter((s) => citedKeys.includes(s.key));
+
   return (
     <main style={{ maxWidth: 800, margin: "2rem auto", padding: "0 1.25rem" }}>
       <h2>{docMeta.title}</h2>
@@ -173,8 +251,20 @@ function EditorInner({ docId, docMeta }: { docId: string; docMeta: DocMeta }) {
           <>
             {" "}
             ·{" "}
-            <button onClick={handleExport} disabled={exporting}>
+            <button onClick={handleScreenplayExport} disabled={exporting}>
               {exporting ? "Exporting..." : "Export PDF"}
+            </button>
+          </>
+        )}
+        {format === "ACADEMIC" && (
+          <>
+            {" "}
+            ·{" "}
+            <button onClick={() => handleAcademicExport("pdf")} disabled={exporting}>
+              {exporting ? "Exporting..." : "Export PDF"}
+            </button>{" "}
+            <button onClick={() => handleAcademicExport("docx")} disabled={exporting}>
+              {exporting ? "Exporting..." : "Export Word"}
             </button>
           </>
         )}
@@ -194,7 +284,6 @@ function EditorInner({ docId, docMeta }: { docId: string; docMeta: DocMeta }) {
         </form>
       )}
 
-      {/* Screenplay element-type toolbar */}
       {format === "SCREENPLAY" && editor && (
         <div className="format-toolbar">
           {SCREENPLAY_ELEMENTS.map(({ type, label }) => (
@@ -209,7 +298,6 @@ function EditorInner({ docId, docMeta }: { docId: string; docMeta: DocMeta }) {
         </div>
       )}
 
-      {/* Rich-text toolbar for Blog / Academic */}
       {(format === "BLOG" || format === "ACADEMIC") && editor && (
         <div className="format-toolbar">
           <button onClick={() => editor.chain().focus().toggleBold().run()} className={editor.isActive("bold") ? "is-active" : ""}>
@@ -236,7 +324,52 @@ function EditorInner({ docId, docMeta }: { docId: string; docMeta: DocMeta }) {
           <button onClick={() => editor.chain().focus().toggleBlockquote().run()} className={editor.isActive("blockquote") ? "is-active" : ""}>
             " Quote
           </button>
-          {format === "ACADEMIC" && <button onClick={insertFootnote}>+ Footnote</button>}
+          {format === "ACADEMIC" && (
+            <>
+              <button onClick={insertFootnote}>+ Footnote</button>
+              <button onClick={() => setShowReferences((s) => !s)}>
+                {showReferences ? "Hide References" : "References"}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {format === "ACADEMIC" && showReferences && (
+        <div className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
+          <h3 className="eyebrow">Sources</h3>
+          {sources.map((s) => (
+            <div key={s.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
+              <span style={{ fontSize: "0.9rem" }}>
+                {s.author} ({s.year || "n.d."}) — <em>{s.title}</em>
+              </span>
+              <span>
+                <button onClick={() => insertCitation(s)} style={{ marginRight: "0.4rem" }}>
+                  Cite
+                </button>
+                <button onClick={() => removeSource(s.key)}>Remove</button>
+              </span>
+            </div>
+          ))}
+          <form onSubmit={addSource} style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem" }}>
+            <input
+              placeholder="Author"
+              value={newSource.author}
+              onChange={(e) => setNewSource({ ...newSource, author: e.target.value })}
+            />
+            <input
+              placeholder="Title"
+              value={newSource.title}
+              onChange={(e) => setNewSource({ ...newSource, title: e.target.value })}
+            />
+            <input
+              placeholder="Year"
+              value={newSource.year}
+              onChange={(e) => setNewSource({ ...newSource, year: e.target.value })}
+              style={{ width: "5rem" }}
+            />
+            <button type="submit">Add source</button>
+          </form>
         </div>
       )}
 
@@ -250,6 +383,18 @@ function EditorInner({ docId, docMeta }: { docId: string; docMeta: DocMeta }) {
                 <li key={f.index}>{f.note}</li>
               ))}
             </ol>
+          </div>
+        )}
+        {format === "ACADEMIC" && citedSources.length > 0 && (
+          <div className="academic-footnotes">
+            <strong className="eyebrow">References</strong>
+            <ul style={{ listStyle: "none", padding: 0 }}>
+              {citedSources.map((s) => (
+                <li key={s.key} style={{ marginBottom: "0.3rem" }}>
+                  {s.author} ({s.year || "n.d."}). <em>{s.title}</em>.
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>

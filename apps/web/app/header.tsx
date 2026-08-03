@@ -1,12 +1,27 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { ThemeToggle } from "./theme-provider";
 import { FontPicker } from "./font-provider";
 
 export default function Header() {
   const { data: session } = useSession();
+  const pathname = usePathname();
+
+  const navLink = (href: string, label: string) => (
+    <Link
+      href={href}
+      style={{
+        textDecoration: "none",
+        color: pathname === href ? "var(--accent)" : "var(--ink-soft)",
+        fontWeight: pathname === href ? 700 : 400,
+      }}
+    >
+      {label}
+    </Link>
+  );
 
   return (
     <header
@@ -35,9 +50,9 @@ export default function Header() {
         </Link>
         {session?.user && (
           <nav style={{ display: "flex", gap: "1rem" }} className="eyebrow">
-            <Link href="/">Feed</Link>
-            <Link href="/documents">My Projects</Link>
-            <Link href="/profile">Profile</Link>
+            {navLink("/", "Feed")}
+            {navLink("/documents", "My Projects")}
+            {navLink("/profile", "Profile")}
           </nav>
         )}
       </div>

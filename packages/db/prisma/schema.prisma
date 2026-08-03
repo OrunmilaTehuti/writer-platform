@@ -14,10 +14,22 @@ enum DocumentFormat {
 }
 
 enum PostType {
-  STATUS         // short update, no attached document
-  EXCERPT        // snippet of a document, links back to it
-  PUBLISHED      // full document shared publicly
-  COLLABORATION  // auto-generated "X and Y are collaborating" announcement
+  STATUS
+  EXCERPT
+  PUBLISHED
+  COLLABORATION
+}
+
+enum CollaborationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum NotificationType {
+  FOLLOW
+  LIKE
+  COMMENT
 }
 
 model User {
@@ -55,15 +67,16 @@ model Follow {
   @@unique([followerId, followingId])
 }
 
-// A Document is the actual piece of writing. Content is stored as the
-// ProseMirror/Tiptap JSON tree; `format` determines which editor mode,
-// export renderer, and validation rules apply to it.
 model Document {
   id            String          @id @default(cuid())
   title         String
   format        DocumentFormat
-  content       Json            // ProseMirror JSON doc
-  yjsState      Bytes?          // last-persisted Yjs binary update, for collab recovery
+  content       Json
+  yjsState      Bytes?
+  // Bibliography sources for ACADEMIC documents - a simple JSON array of
+  // { key, author, title, year } objects, managed via the References
+  // panel and referenced by Citation nodes' bibKey attribute in the doc.
+  references    Json?
   isPublic      Boolean         @default(false)
   owner         User            @relation(fields: [ownerId], references: [id])
   ownerId       String
@@ -74,22 +87,13 @@ model Document {
   posts         Post[]
 }
 
-enum CollaborationStatus {
-  PENDING
-  ACCEPTED
-  DECLINED
-}
-
-// Join table for multi-user real-time collaboration permissions. New
-// collaborators start PENDING until they accept the invite - editor
-// access (and the collab-announcement post) only happens once ACCEPTED.
 model DocumentCollaborator {
   id            String              @id @default(cuid())
   document      Document            @relation(fields: [documentId], references: [id])
   documentId    String
   user          User                @relation(fields: [userId], references: [id])
   userId        String
-  role          String              @default("editor") // editor | viewer
+  role          String              @default("editor")
   status        CollaborationStatus @default(PENDING)
   createdAt     DateTime            @default(now())
 
@@ -99,7 +103,7 @@ model DocumentCollaborator {
 model Post {
   id            String    @id @default(cuid())
   type          PostType
-  body          String?   // status text, or excerpt caption
+  body          String?
   author        User      @relation(fields: [authorId], references: [id])
   authorId      String
   document      Document? @relation(fields: [documentId], references: [id])
@@ -132,15 +136,6 @@ model Like {
   @@unique([userId, postId])
 }
 
-enum NotificationType {
-  FOLLOW
-  LIKE
-  COMMENT
-}
-
-// A notification always has an actor (who did the thing) and a recipient
-// (who it's for). `post` is set for LIKE/COMMENT notifications and left
-// null for FOLLOW notifications, since a follow isn't tied to a post.
 model Notification {
   id          String            @id @default(cuid())
   type        NotificationType
